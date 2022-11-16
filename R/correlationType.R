@@ -16,8 +16,8 @@ correlationByType <- function(x, y, method=c('continious', 'binary', 'nominal', 
     nbLevel <- as.factor(c(x,y))
     nbLevel <- length(levels(nbLevel))
   }
-  if(method == 'binary') {
-
+  if(method != 'continious') {
+    df <- contingencyTable2groups(x, y)
   }
   corr <- switch(method,
                  continious = cor(x, y, use = 'pairwise.complete.obs'),
