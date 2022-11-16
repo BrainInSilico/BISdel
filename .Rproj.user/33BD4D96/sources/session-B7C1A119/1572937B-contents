@@ -1,0 +1,153 @@
+#
+# This is the server logic of a Shiny web application. You can run the
+# application by clicking 'Run App' above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
+library(shiny)
+library(naniar)
+library(readxl)
+options(shiny.maxRequestSize=50*1024^2)
+
+# Define server logic required to draw a histogram
+shinyServer(function(input, output) {
+
+    maxColForManualChoice <- 20
+    
+    rawData <- reactive({
+      req(input$rawData)
+      extension <- tools::file_ext(input$rawData$name)
+      data <- NULL
+      if(tolower(extension) == 'xlsx') {
+        data <- read_excel(input$rawData$datapath)
+      } else if(tolower(extension) == 'csv') {
+        data <- read.delim2(input$rawData$datapath, sep = ',', na.strings = c('', 'NA'))
+      } else {
+        stop('incorrect extension, please use a csv or xlsx file')
+      }
+      return(data)
+    })
+    
+    rootFileName <- reactive({
+      req(input$rawData$datapath)
+      return(tools::file_path_sans_ext(input$rawData$name))
+    })
+    
+    rawNbMissing <- reactive({
+      req(rawData())
+      nbMissing <- apply(rawData(), 2, FUN = function(x) {length(which(is.na(x)))})
+      return(nbMissing)
+    })
+    
+    rawRatioMissing <- reactive({
+      req(rawNbMissing())
+      ratioMissing <- round(rawNbMissing()/nrow(rawData()), 3)
+    })
+    
+    displayColSelection <- reactive({
+      bool <- NULL
+      if(ncol(currentData()) <= maxColForManualChoice) {
+        bool <- 'ok'
+      }
+      return(bool)
+    })
+    
+    #---- selecting columns -------
+    
+    output$columnsBox <- renderUI({
+      req(currentData(), displayColSelection())
+      colNames <- colnames(currentData())
+      prettyCheckboxGroup(
+        inputId='columnsBox',
+        label = 'columns names', 
+        choices=colNames,
+        selected = colNames
+      )
+    })
+    
+    selectedCols <- reactive({
+      req(rawData())
+      if(input$doAutoClean) {
+        selected <- which(rawRatioMissing() < input$missingThreshold)
+      } else {
+        if(!is.null(input$columnsBox)) {
+          selected <- which(colnames(rawData()) %in% input$columnsBox)
+        } else {
+          selected <- 1:ncol(rawData())
+        }
+      }
+      
+      return(selected)
+    })
+    
+    #---- updated data -------
+    
+    currentData <- reactive({
+      req(rawData())
+      df <- as.data.frame(rawData()[,selectedCols()])
+      return(df)
+    })
+    
+    output$missingThreshold <- renderUI({
+      req(rawData(), input$doAutoClean)
+      sliderInput('missingThreshold', 'minimum ratio of missing data to remove a column:',
+                  min = 0, max = 1,
+                  value = 1)
+    })
+    
+    #---- plots and tables -------
+    output$missPlot <- renderPlot({
+      req(currentData(), selectedCols())
+      validate(
+        need(ncol(currentData()) > 0, 'please make sure at least one column is selected')
+      )
+      return(suppressMessages(suppressWarnings(vis_miss(currentData()))))
+    })
+    
+    nbMissing <- reactive({
+      req(currentData())
+      nbMissing <- apply(currentData(), 2, FUN = function(x) {length(which(is.na(x)))})
+      return(nbMissing)
+    })
+    
+    ratioMissing <- reactive({
+      req(nbMissing())
+      ratioMissing <- round(nbMissing()/nrow(currentData()), 3)
+    })
+    
+    output$tableRatioMissing <- renderDataTable({
+      req(currentData())
+      df <- data.frame(column=colnames(currentData()),
+                       `ratio missing data`=ratioMissing())
+      return(df)
+    })
+    
+    output$missplotPerCol <- renderPlot({
+      req(currentData())
+      return(gg_miss_var(currentData()))
+    })
+    
+    #---- dowload ----------------
+    
+    output$downloadCurrent <- downloadHandler(filename = paste0(rootFileName(), '_processed.csv'),
+                                                        content = function(file) {
+                                                          write.table(currentData(), file = file, sep=',',
+                                                                      row.names = F, quote = F)
+                                                        }
+    )
+    
+    output$downloadCurrentDataUI <- renderUI({
+      req(currentData())
+      downloadButton("downloadCurrent", "Download processed data")
+    })
+    
+    #---- debug ------------------
+    
+    output$debug <- renderText({
+      input$doAutoClean
+    })
+
+})

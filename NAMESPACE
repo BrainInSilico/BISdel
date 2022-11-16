@@ -1,0 +1,7 @@
+exportPattern("^[[:alpha:]]+")
+export(contingencyTable2groups)
+export(correlationByType)
+import(ggplot2)
+import(psych)
+import(rcompanion)
+import(tidyr)

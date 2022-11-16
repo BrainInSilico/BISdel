@@ -1,0 +1,10 @@
+
+#' @description create a contingency table for
+#' @param x vector of data
+#' @param y another vector of data of the same type than x
+#' @param method continious, binary, nominal or ordinal
+#' @return a correlation value between -1 and 1
+contingencyTable2by2 <- function(x, y) {
+  Wage$wage_cat<-as.factor(ifelse(Wage$wage>median(Wage$wage),"Above","Below"))
+  con1<-table(Wage$jobclass,Wage$wage_cat)
+}
