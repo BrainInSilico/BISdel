@@ -39,15 +39,19 @@ test_that('correlation continious', {
   expect_equal(res, 1)
 })
 
-test_that('contingency table', {
-  x <- c(0, 1, 0, 1, 0, 1, 0, 0)
-  y <- c(0, 1, 0, 1, 0, 1, 1, 1)
-  contingency <- as.factor(ifelse(,"Above","Below"))
-  suppressWarnings(res <- tetrachoric(x, y)$rho)
-  expect_equal(res, 1)
+test_that('function', {
+  x <- c(rep(0,19), rep(1,30))
+  y <- c(rep(0,12), rep(1,39))
+  res <- correlationByType(x,y,method = 'binary')
+  expect_equal(res, 0.27, tolerance=0.05)
 
-  x <- c(0, 1, 0, 1, 0, 1, 0, 0)
-  y <- c(1, 1, 1, 1, 1, 1, 1, 1)
-  suppressWarnings(res <- tetrachoric(x, y)$rho)
-  expect_equal(res, -1)
+  x <- c(1, 1, 2, 2, 3, 2, 2, 3, 2, 3, 3, 2, 1, 2, 2, 1, 1, 1, 2, 2)
+  y <- c(1, 1, 2, 1, 3, 3, 3, 2, 2, 3, 3, 3, 2, 2, 2, 1, 2, 1, 3, 3)
+  res <- correlationByType(x,y,method = 'ordinal')
+  expect_equal(res, 0.7828328, tolerance=0.05)
+
+  x <- c(rep('blue', 6), rep('green', 8), rep('brown', 12))
+  y <- c(rep('blue', 9), rep('green', 5), rep('brown', 10))
+  res <- correlationByType(x,y,method = 'nominal')
+  expect_equal(unname(res), 0.1671, tolerance=0.05)
 })

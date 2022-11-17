@@ -21,12 +21,9 @@ correlationByType <- function(x, y, method=c('continious', 'binary', 'nominal', 
   }
   corr <- switch(method,
                  continious = cor(x, y, use = 'pairwise.complete.obs'),
-                 binary = tetrachoric(x,y),
-                 ordinal = polychoric(x, y, max.cat = as.factor(c(x.y))),
-                 nominal = cramerV(x,y))
-  # Cramer index is from 0 to 1 we want it from -1 to 1
-  if(method == 'nominal') {
-    corr <- corr*2 - 1
-  }
+                 binary = tetrachoric(df)$rho,
+                 ordinal = polycor::polychor(x,y),
+                 nominal = cramerV(df)
+                 )
   return(corr)
 }
